@@ -21,7 +21,7 @@ document.addEventListener(
     PIXI.tilemap.Constant.boundSize = 2048;
     PIXI.tilemap.Constant.bufferSize = 4096;
     var assetsFolder = './assets/';
-    var TIME = -42;
+    var TIME = 0;
     var imagePath = assetsFolder + 'imgs/imgGround.png';
     imagePath = assetsFolder + 'imgs/island.png';
     var tmxFile = assetsFolder + 'tiled/island.tmx';
@@ -102,21 +102,24 @@ document.addEventListener(
           app,
           // scaleMode: PIXI.SCALE_MODES.NEAREST,
         });
-        // const test = new PIXI.Sprite(TILESET.getBakedTexture());
-        // app.stage.addChild(test);
-        // return;
-        app.render();
+
+        console.log(
+          PIXI.utils.TextureCache[imagePath],
+          TILESET.getBakedTexture()
+        );
         var TILEMAP = new PIXI.tilemap.CompositeRectTileLayer(
           0,
-          TILESET.getBakedTexture() // doesnt do anything :( pixi-tilemap ignores it
+          [TILESET.getBakedTexture().baseTexture] // doesnt do anything :( pixi-tilemap ignores it
         );
         app.stage.addChild(TILEMAP);
-        console.log(TILEMAP);
+        // console.log(TILEMAP);
 
-        console.log(PIXI.utils.TextureCache);
+        // console.log('base', TILESET.getBakedTexture().baseTexture);
         const testSprite = (id, x, y) => {
           if (!id) {
-            const test = new PIXI.Sprite(TILESET.getBakedTexture());
+            const tex = TILESET.getBakedTexture();
+            console.log('TEXTURE', tex);
+            const test = new PIXI.Sprite(tex);
             app.stage.addChild(test);
             return;
           }
@@ -151,7 +154,11 @@ document.addEventListener(
                     tile => tile.id === tileUid - 1
                   );
 
-                  if (tileData && tileData.animation) {
+                  if (
+                    tileData &&
+                    tileData.animation &&
+                    TILESET.getFrame(tileUid)
+                  ) {
                     // console.log('>>>>', tileUid, TILESET.getFrame(tileUid));
                     TILEMAP.addFrame(
                       TILESET.getFrame(tileUid),
@@ -182,27 +189,27 @@ document.addEventListener(
         }, 200);
       }
     } else if (TRY_LIB === 2) {
-      // const json = assetsFolder + 'tiled/island.json';
-      // let tileset = island.tilesets[0];
-      // const { tileheight, tilewidth, tilecount } = tileset;
-      // PIXI.loader.add(imagePath).load(loader => {
-      //   app.world = new PIXI.Tiled.World({
-      //     tilewidth,
-      //     tileheight,
-      //     texture: PIXI.utils.TextureCache[imagePath],
-      //     offset: 1,
-      //     count: tilecount,
-      //   });
-      //   const group = ['Domek', 'Kibel', 'Bees', 'Thor', 'Meat'];
-      //   const clear = ['Spawn'];
-      //   app.world.create(json, imagePath, 42, group, clear).then(world => {
-      //     app.stage.addChild(world);
-      //     console.log(
-      //       `world has ${app.stage.children[0].children.length} children`
-      //     );
-      //     app.start();
-      //   });
-      // });
+      const json = assetsFolder + 'tiled/island.json';
+      let tileset = island.tilesets[0];
+      const { tileheight, tilewidth, tilecount } = tileset;
+      PIXI.loader.add(imagePath).load(loader => {
+        app.world = new PIXI.Tiled.World({
+          tilewidth,
+          tileheight,
+          texture: PIXI.utils.TextureCache[imagePath],
+          offset: 1,
+          count: tilecount,
+        });
+        const group = ['Domek', 'Kibel', 'Bees', 'Thor', 'Meat'];
+        const clear = ['Spawn'];
+        app.world.create(json, imagePath, 42, group, clear).then(world => {
+          app.stage.addChild(world);
+          console.log(
+            `world has ${app.stage.children[0].children.length} children`
+          );
+          app.start();
+        });
+      });
     } else if (TRY_LIB === 3) {
       // TileMapToPixi
       let tileset = island.tilesets[0];
@@ -215,7 +222,7 @@ document.addEventListener(
           let map1 = new TileMapToPixi('TestMap1');
           app.stage.addChild(map1);
           app.start();
-          // Again requires us to manage animated tiles and objects
+          // Again requires us to manage animated tiles and objects :/
         });
     }
 

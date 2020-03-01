@@ -117,7 +117,7 @@ export default class TileSet {
     y += 1;
     Object.values(this.textureCache).forEach(tile => {
       var sprite = new PIXI.Sprite(tile);
-      // sprite.tint = Math.random() * 0xffffff;
+      sprite.tint = Math.random() * 0xffffff;
 
       const xPos = x * this.tilewidth;
       const yPos = y * this.tileheight;
@@ -137,7 +137,10 @@ export default class TileSet {
       height: container.height,
       autoResize: true,
     });
-    this.bakedTexture = tex;
+
+    // const texture = new PIXI.Texture(tex);
+    // texture.textureCacheIds = ['./assets/imgs/island.png'];
+    // this.bakedTexture = texture;
     return tex;
   }
   getBakedTexture() {
