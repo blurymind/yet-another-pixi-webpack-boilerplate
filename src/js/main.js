@@ -4,14 +4,10 @@ import 'pixi-sound';
 // import { tmx } from 'tmx-tiledmap';
 // import tmx from 'tmx-parser';
 // import 'pixi-tiledmap';
-import 'pixi-tiled-utils';
-import { utils } from 'pixi-tiled-utils/lib/utils';
-import { TextureExtractor } from 'pixi-tiled-utils/lib/extract';
-// import { addExtensions } from './helpers/Utilities';
-// import { ContainerScaler } from './base/ContainerScaler';
-// import { ExampleRunner } from './example/ExampleRunner';
-// import './lib/pixi-tilemap4';
-import './lib/pixi-tilemap/dist/pixi-tilemap';
+import 'pixi-tiled-utils'; //test2
+import TileSet from './lib/TileSet'; // test1
+import './lib/pixi-tilemap/dist/pixi-tilemap'; //test 1
+import TileMapToPixi from './lib/tiled-to-pixi/src/TiledMap'; //test 3
 // import tmxFile from './tiled/desert.tmx';
 import tiledMapLoader from './lib/tiledMapLoader';
 import island from './tiled/json/island.json';
@@ -19,8 +15,9 @@ import island from './tiled/json/island.json';
 document.addEventListener(
   'DOMContentLoaded',
   () => {
+    console.log(TileMapToPixi);
     const TRY_LIB = 1;
-    // 0 - pixi-tiledmap, 1- pixi-tilemap + custom parser, 2 - pixi-tiled-utils
+    // 0 - pixi-tiledmap, 1- pixi-tilemap + custom parser, 2 - pixi-tiled-utils, 3 - tilemap-to-pixi
     PIXI.tilemap.Constant.boundSize = 2048;
     PIXI.tilemap.Constant.bufferSize = 4096;
     var assetsFolder = './assets/';
@@ -32,10 +29,10 @@ document.addEventListener(
     const { tileheight, tilewidth, width, height, tilecount } = island;
 
     var resolutionX = tilewidth * width;
-    console.log(utils, TextureExtractor);
+    console.log(TileSet);
     var resolutionY = tileheight * height;
 
-    var app = new PIXI.Application(resolutionX, resolutionY);
+    var app = new PIXI.Application(resolutionX, resolutionY * 8);
     document.body.appendChild(app.view);
     console.log('ISLAND', island);
 
@@ -58,7 +55,7 @@ document.addEventListener(
         let tileset = txmData.tileSets[0];
         console.log(tileset);
         const { tileHeight, tileWidth, tileCount, tiles } = tileset;
-        const TILESET = new TextureExtractor({
+        const TILESET = new TileSet({
           tileWidth,
           tileHeight,
           texture: PIXI.utils.TextureCache[imagePath],
@@ -92,17 +89,10 @@ document.addEventListener(
       // PIXI-TILEMAP shader approach
       PIXI.loader.add([imagePath]).load(setup);
       function setup() {
-        var TILEMAP = new PIXI.tilemap.CompositeRectTileLayer(
-          0,
-          PIXI.utils.TextureCache[imagePath]
-        );
-        app.stage.addChild(TILEMAP);
-        console.log(TILEMAP);
-
         let tileset = island.tilesets[0];
         const { tileheight, tilewidth, tilecount } = tileset;
 
-        const TILESET = new TextureExtractor({
+        const TILESET = new TileSet({
           tilewidth,
           tileheight,
           texture: PIXI.utils.TextureCache[imagePath],
@@ -112,7 +102,31 @@ document.addEventListener(
           app,
           // scaleMode: PIXI.SCALE_MODES.NEAREST,
         });
-        console.log('TILESET:', TILESET);
+        // const test = new PIXI.Sprite(TILESET.getBakedTexture());
+        // app.stage.addChild(test);
+        // return;
+        app.render();
+        var TILEMAP = new PIXI.tilemap.CompositeRectTileLayer(
+          0,
+          TILESET.getBakedTexture() // doesnt do anything :( pixi-tilemap ignores it
+        );
+        app.stage.addChild(TILEMAP);
+        console.log(TILEMAP);
+
+        console.log(PIXI.utils.TextureCache);
+        const testSprite = (id, x, y) => {
+          if (!id) {
+            const test = new PIXI.Sprite(TILESET.getBakedTexture());
+            app.stage.addChild(test);
+            return;
+          }
+          const test = new PIXI.Sprite(TILESET.getFrame(id));
+          test.position.x = x;
+          test.position.y = y;
+          app.stage.addChild(test);
+        };
+        // testSprite(); //uncomment to see tilemap
+        // return;
         island.layers.forEach(layer => {
           if (!layer.visible) return;
           console.log('LAYER>>', layer);
@@ -138,30 +152,14 @@ document.addEventListener(
                   );
 
                   if (tileData && tileData.animation) {
-                    // Pixi-tilemap is to riggid to handle parsing animated tile data atm,
-                    // so we cant use it here
-                    var animationTextures = tileData.animation.map(frame =>
-                      TILESET.getFrame(frame.tileid + 1)
-                    );
-                    // var pixiClip = new PIXI.extras.AnimatedSprite(
-                    //   animationTextures
-                    // );
-                    // pixiClip.position.x = xPos;
-                    // pixiClip.position.y = yPos;
-                    // pixiClip.animationSpeed = 10 / 60;
-                    // app.stage.addChild(pixiClip);
-
-                    // console.log(pixiClip);
-                    // pixiClip.play();
-
-                    console.log(tileUid,tileData, tileData.animation.length, tileData.animation.length * tilewidth);
+                    // console.log('>>>>', tileUid, TILESET.getFrame(tileUid));
                     TILEMAP.addFrame(
                       TILESET.getFrame(tileUid),
                       xPos,
                       yPos,
                       1,
                       0,
-                      (tileData.animation.length  * tilewidth)
+                      tileData.animation.length * tilewidth
                     );
                   } else {
                     TILEMAP.addFrame(TILESET.getFrame(tileUid), xPos, yPos);
@@ -177,36 +175,48 @@ document.addEventListener(
         console.log(app.renderer.plugins.tilemap);
         setInterval(() => {
           TIME += 42;
-          app.renderer.plugins.tilemap.tileAnim[0]= TIME;
+          app.renderer.plugins.tilemap.tileAnim[0] = TIME;
           // console.log(TIME);
 
           app.renderer.render(app.stage);
-          
         }, 200);
       }
     } else if (TRY_LIB === 2) {
-      const json = assetsFolder + 'tiled/island.json';
+      // const json = assetsFolder + 'tiled/island.json';
+      // let tileset = island.tilesets[0];
+      // const { tileheight, tilewidth, tilecount } = tileset;
+      // PIXI.loader.add(imagePath).load(loader => {
+      //   app.world = new PIXI.Tiled.World({
+      //     tilewidth,
+      //     tileheight,
+      //     texture: PIXI.utils.TextureCache[imagePath],
+      //     offset: 1,
+      //     count: tilecount,
+      //   });
+      //   const group = ['Domek', 'Kibel', 'Bees', 'Thor', 'Meat'];
+      //   const clear = ['Spawn'];
+      //   app.world.create(json, imagePath, 42, group, clear).then(world => {
+      //     app.stage.addChild(world);
+      //     console.log(
+      //       `world has ${app.stage.children[0].children.length} children`
+      //     );
+      //     app.start();
+      //   });
+      // });
+    } else if (TRY_LIB === 3) {
+      // TileMapToPixi
       let tileset = island.tilesets[0];
       const { tileheight, tilewidth, tilecount } = tileset;
 
-      PIXI.loader.add(imagePath).load(loader => {
-        app.world = new PIXI.Tiled.World({
-          tilewidth,
-          tileheight,
-          texture: PIXI.utils.TextureCache[imagePath],
-          offset: 1,
-          count: tilecount,
-        });
-        const group = ['Domek', 'Kibel', 'Bees', 'Thor', 'Meat'];
-        const clear = ['Spawn'];
-        app.world.create(json, imagePath, 42, group, clear).then(world => {
-          app.stage.addChild(world);
-          console.log(
-            `world has ${app.stage.children[0].children.length} children`
-          );
+      PIXI.loader
+        .add('TestMap1', tmxFile)
+        .use(TileMapToPixi.middleware)
+        .load((loader, resources) => {
+          let map1 = new TileMapToPixi('TestMap1');
+          app.stage.addChild(map1);
           app.start();
+          // Again requires us to manage animated tiles and objects
         });
-      });
     }
 
     app.start();
